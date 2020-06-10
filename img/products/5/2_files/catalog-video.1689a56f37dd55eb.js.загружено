@@ -1,0 +1,102 @@
+function CatalogProductVideo(dispatcher) {
+    this.dispatcher = dispatcher;
+    this.players = [];
+}
+
+CatalogProductVideo.prototype.getEmbededVideo = function (url, type, element, index) {
+    var id;
+
+    if (!url || !type) {
+        return '';
+    }
+
+    switch (type) {
+        case 'youtube':
+            id = url.indexOf('https://www.youtube.com') !== -1 ? url.split('v=').pop() : url.split('/').pop();
+
+            return this._getYoutubeVideo(id, element, index);
+            break;
+        case 'vimeo':
+            return this._getVimeoVideo(url, element, index);
+            break;
+    }
+};
+
+CatalogProductVideo.prototype._getYoutubeVideo = function (id, element, index) {
+    var player = new YT.Player(element, {
+        width: '80%',
+        height: '80%',
+        videoId: id,
+        playerVars: {
+            rel: 0
+        }
+    });
+
+    this.players[index] = player;
+};
+
+CatalogProductVideo.prototype._getVimeoVideo = function (url, element) {
+    $.getJSON('https://vimeo.com/api/oembed.json?url=' + url, {
+        format: 'json'
+    }, function (data) {
+        data.html && $(element).replaceWith(data.html);
+    });
+};
+
+CatalogProductVideo.prototype.getThumbnail = function (url, type, element) {
+    var id;
+
+    if (!url || !type) {
+        return '';
+    }
+
+    switch (type) {
+        case 'youtube':
+            id = url.indexOf('https://www.youtube.com') !== -1 ? url.split('v=').pop() : url.split('/').pop();
+
+            return this._getYoutubeThumbnail(id);
+            break;
+        case 'vimeo':
+            id = url.split('/').pop();
+            return this._getVimeoThumbnail(id, element);
+            break;
+    }
+};
+
+CatalogProductVideo.prototype._getYoutubeThumbnail = function (id) {
+    return 'https://i1.ytimg.com/vi/' + id + '/hqdefault.jpg';
+};
+
+CatalogProductVideo.prototype._getVimeoThumbnail = function (id, element) {
+    var thumbnail = '';
+
+    $.ajax({
+        type: 'GET',
+        url: 'https://vimeo.com/api/v2/video/' + id + '.json',
+        dataType: 'json',
+        success: function (data) {
+            $(element).css('background-image', 'url(' + data[0].thumbnail_large + ')');
+        },
+        error: function () {
+
+        }
+    });
+
+    return thumbnail;
+};
+
+CatalogProductVideo.prototype.stopAllVideos = function () {
+    this.players.forEach(function (player) {
+        player.stopVideo && player.getPlayerState() === 1 && player.stopVideo();
+    });
+};
+
+CatalogProductVideo.prototype.playVideo = function (index) {
+    var self = this;
+
+    this.stopAllVideos();
+
+    setTimeout(function () {
+        self.players[index] && self.players[index].playVideo && self.players[index].playVideo()
+    }, 1000);
+};
